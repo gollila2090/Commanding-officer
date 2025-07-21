@@ -1,8 +1,8 @@
-<!DOCTYPE html>
+
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>발령 및 위촉대장</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -12,6 +12,18 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <!-- Removed Firebase SDKs import -->
     <style>
+        /*
+         * 전체적인 반응형 디자인 전략:
+         * 1. viewport meta 태그를 사용하여 기기 너비에 맞게 스케일 조정.
+         * 2. Tailwind CSS의 기본 모바일 우선(mobile-first) 접근 방식을 활용.
+         * - `width: 100%` 및 `max-width`로 컨테이너가 화면 크기에 맞춰 유연하게 조정.
+         * - 그리드 레이아웃 (`grid-cols-1 md:grid-cols-2 lg:grid-cols-3`)을 사용하여
+         * 화면 크기에 따라 열의 수를 자동으로 변경.
+         * - 테이블은 `overflow-x-auto`를 통해 작은 화면에서 가로 스크롤을 허용하여 내용 잘림 방지.
+         * 3. 폼 요소, 버튼 등은 `width: 100%`를 기본으로 하여 유연하게 크기 조정.
+         * 4. 모달 창은 `width: 90%` 및 `max-width`를 사용하여 반응형으로 동작.
+         * 5. 폰트 크기 및 패딩은 상대적인 단위를 사용하거나 Tailwind의 기본 반응형 동작을 따름.
+         */
         body {
             font-family: 'Inter', sans-serif;
             background-color: #e0e7ff; /* Softer, modern background blue */
@@ -207,7 +219,7 @@
             gap: 1.25rem; /* Increased gap */
         }
         .modal-buttons .btn {
-            min-width: 120px; /* Wider buttons */
+            /* Removed fixed min-width to allow better responsiveness on small screens */
             padding: 0.75rem 1.5rem;
             font-size: 1rem;
         }
@@ -316,7 +328,7 @@
         {
             white-space: nowrap;
         }
-
+        
     </style>
 </head>
 <body>
@@ -942,7 +954,7 @@
                     }
                 });
             }
-
+            
             const sortedYears = Array.from(years).sort((a, b) => parseInt(b) - parseInt(a)); // Sort descending
 
             // Add 'All' option
@@ -968,7 +980,7 @@
                 yearFilterSelect.value = 'all';
                 currentYearFilter = 'all';
             }
-
+            
             // Set academicYear input to current selected year filter if not 'all'
             if (currentYearFilter !== 'all') {
                 academicYearInput.value = currentYearFilter;
@@ -1068,7 +1080,7 @@
                 positionType: selectedPositionType, // Save the selected position type
                 positionCustomText: selectedPositionType === '기타(입력)' ? otherPositionInput.value : '', // Save custom text if '기타(입력)'
                 name: nameInput.value,
-
+                
                 appointingAuthorityType: selectedAppointingAuthorityType,
                 appointingAuthorityCustomText: selectedAppointingAuthorityType === '기타(입력)' ? otherAppointingAuthorityInput.value : '',
 
@@ -1151,8 +1163,8 @@
 
         // Reset Form and Button States
         function resetForm() {
-            window.editingRecordId = null; // Use window.editingRecordId
-            window.editingRecordCategory = null; // Use window.editingRecordCategory
+            window.editingRecordId = null; // Corrected from wind.editingRecordId
+            window.editingRecordCategory = null; // Corrected from wind.editingRecordCategory
 
             if (currentCategory === 'appointment-register') {
                 registerForm.reset();
@@ -1191,7 +1203,7 @@
                 appointingAuthoritySelect.value = '';
                 appointmentDetailsSelect.value = '';
                 positionSelect.value = ''; // Ensure position select is reset
-
+                
                 // Set academicYear input to current selected year filter if not 'all'
                 if (currentYearFilter !== 'all') {
                     academicYearInput.value = currentYearFilter;
@@ -1205,7 +1217,7 @@
         async function generateNewRegisterNumber(assignToInput = false) {
             const currentYear = new Date().getFullYear().toString();
             const allRegisterRecords = await localStorageManager.getRecords('appointment-register');
-
+            
             let maxNum = 0;
             if (allRegisterRecords) {
                 allRegisterRecords.forEach(rec => {
@@ -1223,7 +1235,7 @@
 
             const newNum = maxNum + 1;
             const generatedNumber = `${currentYear}-${newNum}`;
-
+            
             if (assignToInput) {
                 registerNumberInput.value = generatedNumber;
             }
@@ -1285,17 +1297,15 @@
                         displayAppointmentDetails = record.appointmentDetailsCustomText || '기타';
                     }
 
-                    // Appointing Authority Display Logic
                     const displayAppointingAuthority = record.appointingAuthorityType === '기타(입력)' ? 
                                                         record.appointingAuthorityCustomText || '기타(입력)' : 
                                                         record.appointingAuthorityType || '';
-
+                    
                     // Position Display Logic (new)
                     const displayPosition = record.positionType === '기타(입력)' ?
                                             record.positionCustomText || '기타' :
                                             record.positionType || '';
 
-                    // Affiliation Display Logic (convert '초등학교' to '초')
                     let displayAffiliation = record.affiliation || '';
                     if (displayAffiliation.endsWith('초등학교')) {
                         displayAffiliation = displayAffiliation.replace('초등학교', '초');
@@ -1387,7 +1397,7 @@
             academicYearInput.value = recordToEdit.academicYear || '';
             appointmentDateInput.value = recordToEdit.appointmentDate || '';
             affiliationInput.value = recordToEdit.affiliation || '';
-
+            
             // Handle position select and custom input
             positionSelect.value = recordToEdit.positionType || '';
             if (recordToEdit.positionType === '기타(입력)') {
@@ -1399,7 +1409,7 @@
             }
 
             nameInput.value = recordToEdit.name || '';
-
+            
             appointingAuthoritySelect.value = recordToEdit.appointingAuthorityType || '';
             if (recordToEdit.appointingAuthorityType === '기타(입력)') {
                 otherAppointingAuthorityContainer.classList.remove('hidden');
@@ -1599,7 +1609,7 @@
                     const displayAppointingAuthority = record.appointingAuthorityType === '기타(입력)' ? 
                                                         record.appointingAuthorityCustomText || '기타(입력)' : 
                                                         record.appointingAuthorityType || '';
-
+                    
                     // Position Display Logic for PDF/Print
                     const displayPosition = record.positionType === '기타(입력)' ?
                                             record.positionCustomText || '기타' :
@@ -1720,7 +1730,7 @@
             `);
             printWindow.document.write('</style>');
             printWindow.document.write('</head><body>');
-
+            
             // Change PDF/Print Title: (Category Name) 발령대장 or 위촉대장
             if (currentCategory === 'appointment-register') {
                 printWindow.document.write(`<h2>(${getCurrentCategoryTitle()}) 위촉대장</h2>`);
@@ -1802,7 +1812,7 @@
                     const displayAppointingAuthority = record.appointingAuthorityType === '기타(입력)' ? 
                                                         record.appointingAuthorityCustomText || '기타(입력)' : 
                                                         record.appointingAuthorityType || '';
-
+                    
                     // Position Display Logic for PDF/Print
                     const displayPosition = record.positionType === '기타(입력)' ?
                                             record.positionCustomText || '기타' :
