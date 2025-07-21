@@ -1,0 +1,1860 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-1.0">
+    <title>발령 및 위촉대장</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- html2pdf.js CDN for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- Removed Firebase SDKs import -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #e0e7ff; /* Softer, modern background blue */
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* Align to top for better content flow */
+            min-height: 100vh;
+            padding: 2rem; /* Add some padding around the main content */
+            box-sizing: border-box;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 1.5rem; /* More rounded corners */
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15); /* Stronger, more refined shadow */
+            width: 100%;
+            max-width: 1200px; /* Max width for PC usage */
+            padding: 3rem; /* Increased padding */
+            display: flex;
+            flex-direction: column;
+            gap: 2.5rem; /* Increased gap between sections */
+        }
+        .tab-button {
+            padding: 0.85rem 1.8rem; /* Slightly larger tabs */
+            border-radius: 1rem; /* More rounded tabs */
+            font-weight: 600; /* Bolder font */
+            transition: all 0.3s ease-in-out;
+            cursor: pointer;
+            color: #6b7280; /* Darker gray text for inactive */
+            background-color: #f1f5f9; /* Lighter background for tabs */
+            border: 1px solid #e2e8f0; /* Subtle border */
+        }
+        .tab-button.active {
+            background-color: #4f46e5; /* Deeper indigo for active tab */
+            color: #ffffff;
+            box-shadow: 0 6px 15px rgba(79, 70, 229, 0.4); /* Deeper indigo shadow */
+            transform: translateY(-2px); /* Slight lift effect */
+        }
+        .tab-button:hover:not(.active) {
+            background-color: #e2e8f0; /* Slightly darker on hover */
+            color: #374151; /* Darker text on hover */
+        }
+        input[type="text"], input[type="date"], select {
+            border: 1px solid #cbd5e1; /* Softer gray border */
+            border-radius: 0.75rem; /* More rounded input fields */
+            padding: 0.85rem 1.2rem; /* Increased padding */
+            width: 100%; /* Keep 100% for form inputs */
+            box-sizing: border-box;
+            transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            height: 3.0rem; /* Fixed height for inputs and selects */
+            background-color: #f9fafb; /* Very light background for inputs */
+        }
+        /* Override for the year filter select to allow it to be auto-width */
+        #yearFilterSelect {
+            width: auto; /* Allow the select to size itself */
+        }
+
+        textarea {
+            border: 1px solid #cbd5e1; /* Softer gray border */
+            border-radius: 0.75rem; /* More rounded input fields */
+            padding: 0.85rem 1.2rem; /* Increased padding */
+            width: 100%;
+            box-sizing: border-box;
+            transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            min-height: 3.0rem; /* Min-height for textareas, consistent with inputs */
+            resize: vertical; /* Allow vertical resizing */
+            background-color: #f9fafb; /* Very light background for textareas */
+        }
+        input[type="text"]:focus, input[type="date"]:focus, select:focus, textarea:focus {
+            border-color: #4f46e5; /* Deeper indigo border on focus */
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.2); /* Deeper indigo glow on focus */
+        }
+        .btn {
+            padding: 0.85rem 1.8rem; /* Larger buttons */
+            border-radius: 1rem; /* More rounded buttons */
+            font-weight: 700; /* Bolder font */
+            cursor: pointer;
+            transition: all 0.3s ease-in-out;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem; /* Increased gap for icon */
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); /* General button shadow */
+        }
+        .btn:hover {
+            transform: translateY(-2px); /* Lift effect on hover */
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2); /* Enhanced shadow on hover */
+        }
+        .btn-primary {
+            background-color: #10b981; /* Emerald green for primary actions */
+            color: #ffffff;
+        }
+        .btn-primary:hover {
+            background-color: #059669; /* Darker emerald on hover */
+        }
+        .btn-secondary {
+            background-color: #6366f1; /* Indigo for secondary actions */
+            color: #ffffff;
+        }
+        .btn-secondary:hover {
+            background-color: #4f46e5; /* Darker indigo on hover */
+        }
+        .btn-danger {
+            background-color: #ef4444; /* Red for danger actions */
+            color: #ffffff;
+        }
+        .btn-danger:hover {
+            background-color: #dc2626; /* Darker red on hover */
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            border-spacing: 0;
+            margin-top: 1.5rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08); /* Subtle shadow for table */
+            border-radius: 0.75rem; /* Rounded table corners */
+            overflow: hidden; /* Ensures rounded corners apply to content */
+        }
+        th, td {
+            padding: 0.75rem 1rem; /* Increased padding for table cells */
+            text-align: center; /* Center alignment for table content */
+            border: 1px solid #e2e8f0; /* Lighter border for cells */
+            word-wrap: break-word; /* Allow long words to break */
+            vertical-align: middle;
+            font-size: 0.95rem; /* Slightly larger font for table content */
+        }
+        th {
+            background-color: #f8fafc; /* Very light header background */
+            font-weight: 600;
+            color: #475569; /* Slightly darker text for headers */
+            text-transform: none; /* No uppercase */
+            font-size: 0.9rem; /* Smaller font for headers */
+            white-space: nowrap; /* Ensure headers do not wrap */
+        }
+        tbody tr:nth-child(even) {
+            background-color: #fdfefe; /* Very slight zebra striping */
+        }
+        tbody tr:hover {
+            background-color: #f0f4f8; /* Subtle hover effect */
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6); /* Darker overlay */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+        }
+        .modal-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal-content {
+            background-color: #ffffff;
+            padding: 2.5rem; /* Increased padding */
+            border-radius: 1.5rem; /* More rounded */
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3); /* Stronger shadow */
+            max-width: 450px; /* Slightly wider modal */
+            width: 90%;
+            text-align: center;
+            transform: translateY(-30px); /* More pronounced initial transform */
+            opacity: 0;
+            transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+        }
+        .modal-overlay.show .modal-content {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .modal-content h3 {
+            font-size: 1.75rem; /* Larger title */
+            font-weight: 700;
+            margin-bottom: 1.25rem;
+            color: #334155; /* Darker gray for title */
+        }
+        .modal-content p {
+            font-size: 1.05rem; /* Slightly larger message font */
+            color: #475569;
+            margin-bottom: 2rem; /* Increased margin */
+        }
+        .modal-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1.25rem; /* Increased gap */
+        }
+        .modal-buttons .btn {
+            min-width: 120px; /* Wider buttons */
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+        }
+
+
+        /* PDF specific styles (hidden by default, applied when generating PDF) */
+        .pdf-container-temp {
+            position: absolute;
+            left: -9999px; /* Move off-screen */
+            top: -9999px;
+            width: 100%;
+            padding: 0; /* No padding for PDF container itself */
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+            font-size: 10pt; /* Smaller font for PDF */
+            background-color: #ffffff; /* Ensure white background for PDF */
+        }
+        .pdf-container-temp h2 {
+            text-align: center;
+            margin-bottom: 1rem;
+            font-size: 16pt;
+            padding: 0.5rem; /* Padding for title */
+        }
+        .pdf-container-temp table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed; /* Fixed layout for column widths */
+        }
+        .pdf-container-temp th, .pdf-container-temp td {
+            border: 1px solid #ccc;
+            padding: 5px 8px; /* Slightly reduced padding for PDF */
+            text-align: center; /* Center alignment for PDF table content */
+            vertical-align: middle;
+            word-wrap: break-word; /* Ensure long text wraps */
+            white-space: normal; /* Allow text wrapping */
+        }
+        .pdf-container-temp th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+            white-space: nowrap; /* Ensure headers do not wrap in PDF */
+        }
+        .pdf-container-temp .action-buttons-cell {
+            display: none !important; /* Hide action buttons in PDF */
+        }
+
+        /* Column widths for Appointment Record Table in PDF */
+        .pdf-container-temp #appointmentRecordTableSection th:nth-child(1),
+        .pdf-container-temp #appointmentRecordTableSection td:nth-child(1) { width: 6%; } /* 학년도 */
+        .pdf-container-temp #appointmentRecordTableSection th:nth-child(2),
+        .pdf-container-temp #appointmentRecordTableSection td:nth-child(2) { width: 9%; white-space: normal; } /* 발령일자 - Allow two lines for date */
+        .pdf-container-temp #appointmentRecordTableSection th:nth-child(3),
+        .pdf-container-temp #appointmentRecordTableSection td:nth-child(3) { width: 7%; white-space: nowrap; } /* 소속 - Single line */
+        .pdf-container-temp #appointmentRecordTableSection th:nth-child(4),
+        .pdf-container-temp #appointmentRecordTableSection td:nth-child(4) { width: 6%; } /* 직 */
+        .pdf-container-temp #appointmentRecordTableSection th:nth-child(5),
+        .pdf-container-temp #appointmentRecordTableSection td:nth-child(5) { width: 8%; } /* 성명 */
+        .pdf-container-temp #appointmentRecordTableSection th:nth-child(6),
+        .pdf-container-temp #appointmentRecordTableSection td:nth-child(6) { text-align: left; width: 18%; } /* 발령사항 - Left align */
+        .pdf-container-temp #appointmentRecordTableSection th:nth-child(7),
+        .pdf-container-temp #appointmentRecordTableSection td:nth-child(7) { width: 12%; } /* 발령권자 */
+        .pdf-container-temp #appointmentRecordTableSection th:nth-child(8),
+        .pdf-container-temp #appointmentRecordTableSection td:nth-child(8) { text-align: left; width: 12%; } /* 발령근거 - Left align */
+        .pdf-container-temp #appointmentRecordTableSection th:nth-child(9),
+        .pdf-container-temp #appointmentRecordTableSection td:nth-child(9) { width: 5%; } /* 기록자 - Reduced width */
+        .pdf-container-temp #appointmentRecordTableSection th:nth-child(10),
+        .pdf-container-temp #appointmentRecordTableSection td:nth-child(10) { width: 5%; } /* 확인자 - Reduced width */
+        .pdf-container-temp #appointmentRecordTableSection th:nth-child(11),
+        .pdf-container-temp #appointmentRecordTableSection td:nth-child(11) { width: 10%; } /* 비고 */
+
+        /* Column widths for Appointment Register Table in PDF */
+        .pdf-container-temp #appointmentRegisterTableSection th:nth-child(1),
+        .pdf-container-temp #appointmentRegisterTableSection td:nth-child(1) { width: 10%; } /* 번호 */
+        .pdf-container-temp #appointmentRegisterTableSection th:nth-child(2),
+        .pdf-container-temp #appointmentRegisterTableSection td:nth-child(2) { width: 30%; } /* 위촉내용 */
+        .pdf-container-temp #appointmentRegisterTableSection th:nth-child(3),
+        .pdf-container-temp #appointmentRegisterTableSection td:nth-child(3) { width: 15%; } /* 위촉자 */
+        .pdf-container-temp #appointmentRegisterTableSection th:nth-child(4),
+        .pdf-container-temp #appointmentRegisterTableSection td:nth-child(4) { width: 15%; } /* 위촉년월일 */
+        .pdf-container-temp #appointmentRegisterTableSection th:nth-child(5),
+        .pdf-container-temp #appointmentRegisterTableSection td:nth-child(5) { width: 10%; } /* 교무 */
+        .pdf-container-temp #appointmentRegisterTableSection th:nth-child(6),
+        .pdf-container-temp #appointmentRegisterTableSection td:nth-child(6) { width: 10%; } /* 교감 */
+        .pdf-container-temp #appointmentRegisterTableSection th:nth-child(7),
+        .pdf-container-temp #appointmentRegisterTableSection td:nth-child(7) { width: 10%; } /* 교장 */
+
+        /* General table column styles for display (dashboard) */
+        /* Removed white-space: nowrap from general td to allow wrapping */
+        #recordsTableBody td {
+            white-space: normal; /* Allow content to wrap naturally */
+        }
+        /* Specific overrides for display table where wrapping is desired or already handled by <br> */
+        #recordsTableBody td:nth-child(2) { white-space: normal; } /* 발령일자 - Allows <br> for two lines */
+        #recordsTableBody td:nth-child(6) { text-align: left; white-space: normal; } /* 발령사항 - Left align, allows wrapping */
+        #recordsTableBody td:nth-child(8) { text-align: left; white-space: normal; } /* 발령근거 - Left align, allows wrapping */
+
+        /* Ensure th also respects nowrap where applicable for consistency, though td is the main concern */
+        #appointmentRecordTableSection th:nth-child(1), /* 학년도 */
+        #appointmentRecordTableSection th:nth-child(2), /* 발령일자 */
+        #appointmentRecordTableSection th:nth-child(3), /* 소속 */
+        #appointmentRecordTableSection th:nth-child(4), /* 직 */
+        #appointmentRecordTableSection th:nth-child(5), /* 성명 */
+        #appointmentRecordTableSection th:nth-child(7), /* 발령권자 */
+        #appointmentRecordTableSection th:nth-child(9), /* 기록자 */
+        #appointmentRecordTableSection th:nth-child(10), /* 확인자 */
+        #appointmentRecordTableSection th:nth-child(11) /* 비고 */
+        {
+            white-space: nowrap;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">발령 및 위촉대장 관리 시스템</h1>
+        <div id="authStatus" class="text-center text-sm text-gray-600 mb-4">
+            로딩 중...
+        </div>
+
+        <!-- Category Tabs -->
+        <nav class="flex justify-center gap-4 mb-8">
+            <button class="tab-button active" data-category="primary-teachers">초등교사</button>
+            <button class="tab-button" data-category="kindergarten-teachers">유치원교사</button>
+            <button class="tab-button" data-category="public-service-workers">교육공무직</button>
+            <button class="tab-button" data-category="sports-instructors">스포츠강사</button>
+            <button class="tab-button" data-category="other-instructors">기타강사</button>
+            <button class="tab-button" data-category="appointment-register">위촉대장</button> <!-- New Tab -->
+        </nav>
+
+        <!-- Year Filter Section (New) -->
+        <div class="flex justify-start items-center gap-4 mb-6">
+            <label for="yearFilterSelect" class="text-lg font-medium text-gray-700 whitespace-nowrap">연도 선택</label>
+            <select id="yearFilterSelect" class="border border-gray-300 rounded-lg p-2 focus:ring-blue-500 focus:border-blue-500 w-auto">
+                <!-- Years will be populated dynamically by JavaScript -->
+            </select>
+        </div>
+
+        <!-- Main Content Area -->
+        <div id="content-area">
+            <!-- Appointment Record Form Section -->
+            <div id="appointmentRecordFormSection">
+                <form id="recordForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 bg-gray-50 p-6 rounded-lg shadow-inner">
+                    <h2 class="col-span-full text-xl font-semibold text-gray-700 mb-2">발령자료 입력</h2>
+                    <div class="col-span-1">
+                        <label for="academicYear" class="block text-sm font-medium text-gray-700 mb-1">학년도</label>
+                        <input type="text" id="academicYear" placeholder="예: 2025" class="focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="col-span-1">
+                        <label for="appointmentDate" class="block text-sm font-medium text-gray-700 mb-1">발령일자</label>
+                        <input type="date" id="appointmentDate" class="focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="col-span-1">
+                        <label for="affiliation" class="block text-sm font-medium text-gray-700 mb-1">소속</label>
+                        <input type="text" id="affiliation" placeholder="예: 초등" class="focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="col-span-1">
+                        <label for="position" class="block text-sm font-medium text-gray-700 mb-1">직</label>
+                        <select id="position" class="focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">선택하세요</option>
+                            <option value="교사">교사</option>
+                            <option value="교감">교감</option>
+                            <option value="교장">교장</option>
+                            <option value="원감">원감</option>
+                            <option value="기타(입력)">기타(입력)</option> <!-- Added '기타(입력)' option -->
+                        </select>
+                    </div>
+                    <div id="otherPositionContainer" class="col-span-1 hidden"> <!-- New container for other position -->
+                        <label for="otherPositionInput" class="block text-sm font-medium text-gray-700 mb-1">기타 직종</label>
+                        <input type="text" id="otherPositionInput" placeholder="직접 입력하세요" class="focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="col-span-1">
+                        <label for="name" class="block text-sm font-medium text-gray-700 mb-1">성명</label>
+                        <input type="text" id="name" placeholder="예: 홍길동" class="focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="col-span-1">
+                        <label for="appointingAuthority" class="block text-sm font-medium text-gray-700 mb-1">발령권자</label>
+                        <select id="appointingAuthority" class="focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">선택하세요</option>
+                            <option value="경상남도교육감">경상남도교육감</option>
+                            <option value="양산교육지원청교육장">양산교육지원청교육장</option>
+                            <option value="가남초등학교장">가남초등학교장</option>
+                            <option value="기타(입력)">기타(입력)</option>
+                        </select>
+                    </div>
+                    <div id="otherAppointingAuthorityContainer" class="col-span-1 hidden">
+                        <label for="otherAppointingAuthority" class="block text-sm font-medium text-gray-700 mb-1">기타 발령권자</label>
+                        <input type="text" id="otherAppointingAuthority" placeholder="직접 입력하세요" class="focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="col-span-full">
+                        <label for="appointmentDetails" class="block text-sm font-medium text-gray-700 mb-1">발령사항</label>
+                        <select id="appointmentDetails" class="focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">선택하세요</option>
+                            <option value="신규임용">신규임용</option>
+                            <option value="전보">전보</option>
+                            <option value="00초등학교 근무를 명함.">00초등학교 근무를 명함.</option>
+                            <option value="교육지원청지정초등학교 근무를 명함.">00교육지원청교육장이 지정하는 초등학교 근무를 명함.</option>
+                            <option value="법적휴직_2호">교육공무원법 제44조 제1항 제2호 규정에 의거 휴직을 명함.</option>
+                            <option value="법적휴직_7호">교육공무원법 제44조 제1항 제7호 규정에 의거 휴직연장을 명함.</option>
+                            <option value="법적복직">국가공무원법 제73조 제3항에 의거 복직을 명함.</option>
+                            <option value="법적정년퇴직">교육공무원법 제47조에 의거 정년퇴직을 명함.</option>
+                            <option value="법적명예퇴직">국가공무원법 제74조 제2항에 의거 명예퇴직(특별승진)을 명함.</option>
+                            <option value="00교육청 파견근무를 명함.">00교육청 파견근무를 명함.</option>
+                            <option value="학습연구년제">학습연구년제</option>
+                            <option value="승진">승진</option>
+                            <option value="기타">기타</option>
+                        </select>
+                    </div>
+                    <!-- Dynamic input fields for appointmentDetails -->
+                    <div id="schoolNameContainer" class="col-span-1 hidden">
+                        <label for="schoolNameInput" class="block text-sm font-medium text-gray-700 mb-1">학교명 (00)</label>
+                        <input type="text" id="schoolNameInput" placeholder="예: 가남" class="focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div id="officeNameContainer" class="col-span-1 hidden">
+                        <label for="officeNameInput" class="block text-sm font-medium text-gray-700 mb-1">교육청명 (00)</label>
+                        <input type="text" id="officeNameInput" placeholder="예: 양산" class="focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div id="periodContainer" class="col-span-1 hidden">
+                        <label for="periodInput" class="block text-sm font-medium text-gray-700 mb-1">기간</label>
+                        <input type="text" id="periodInput" placeholder="예: 2025.3.1.~2026.2.28." class="focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div id="otherAppointmentDetailsContainer" class="col-span-full hidden">
+                        <label for="otherAppointmentDetails" class="block text-sm font-medium text-gray-700 mb-1">기타 발령사항</label>
+                        <textarea id="otherAppointmentDetails" rows="3" placeholder="상세 발령 내용을 직접 입력하세요." class="focus:ring-blue-500 focus:border-blue-500"></textarea>
+                    </div>
+                    <div class="col-span-full">
+                        <label for="appointmentBasis" class="block text-sm font-medium text-gray-700 mb-1">발령근거</label>
+                        <textarea id="appointmentBasis" rows="2" placeholder="발령 근거를 입력하세요." class="focus:ring-blue-500 focus:border-blue-500"></textarea>
+                    </div>
+                    <div class="col-span-1">
+                        <label for="recorderConfirmation" class="block text-sm font-medium text-gray-700 mb-1">기록자</label>
+                        <input type="text" id="recorderConfirmation" placeholder="예: OOO (서명)" class="focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="col-span-1">
+                        <label for="confirmerConfirmation" class="block text-sm font-medium text-gray-700 mb-1">확인자</label>
+                        <input type="text" id="confirmerConfirmation" placeholder="예: OOO (서명)" class="focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="col-span-full">
+                        <label for="remarks" class="block text-sm font-medium text-gray-700 mb-1">비고</label>
+                        <textarea id="remarks" rows="2" placeholder="특이사항을 입력하세요." class="focus:ring-blue-500 focus:border-blue-500"></textarea>
+                    </div>
+                    <div class="col-span-full flex justify-end gap-4">
+                        <button type="submit" id="submitRecordBtn" class="btn btn-primary">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
+                            </svg>
+                            기록 추가
+                        </button>
+                        <button type="button" id="cancelEditBtn" class="btn btn-secondary hidden">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                            </svg>
+                            수정 취소
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Appointment Register Form Section -->
+            <div id="appointmentRegisterFormSection" class="hidden">
+                <form id="registerForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 bg-gray-50 p-6 rounded-lg shadow-inner">
+                    <h2 class="col-span-full text-xl font-semibold text-gray-700 mb-2">위촉 기록 입력</h2>
+                    <div class="col-span-1">
+                        <label for="registerNumber" class="block text-sm font-medium text-gray-700 mb-1">번호</label>
+                        <input type="text" id="registerNumber" readonly class="bg-gray-200 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="col-span-1">
+                        <label for="registerAppointmentDate" class="block text-sm font-medium text-gray-700 mb-1">위촉년월일</label>
+                        <input type="date" id="registerAppointmentDate" class="focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="col-span-1">
+                        <label for="appointeeName" class="block text-sm font-medium text-gray-700 mb-1">위촉자</label>
+                        <input type="text" id="appointeeName" placeholder="예: 김철수" class="focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="col-span-full">
+                        <label for="appointmentContent" class="block text-sm font-medium text-gray-700 mb-1">위촉내용</label>
+                        <textarea id="appointmentContent" rows="3" placeholder="위촉 내용을 입력하세요." class="focus:ring-blue-500 focus:border-blue-500"></textarea>
+                    </div>
+                    <div class="col-span-1">
+                        <label for="approvalAcademic" class="block text-sm font-medium text-gray-700 mb-1">교무</label>
+                        <input type="text" id="approvalAcademic" placeholder="예: OOO" class="focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="col-span-1">
+                        <label for="approvalVicePrincipal" class="block text-sm font-medium text-gray-700 mb-1">교감</label>
+                        <input type="text" id="approvalVicePrincipal" placeholder="예: OOO" class="focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="col-span-1">
+                        <label for="approvalPrincipal" class="block text-sm font-medium text-gray-700 mb-1">교장</label>
+                        <input type="text" id="approvalPrincipal" placeholder="예: OOO" class="focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="col-span-full flex justify-end gap-4">
+                        <button type="submit" id="submitRegisterBtn" class="btn btn-primary">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
+                            </svg>
+                            기록 추가
+                        </button>
+                        <button type="button" id="cancelRegisterEditBtn" class="btn btn-secondary hidden">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                            </svg>
+                            수정 취소
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Action Buttons (Common for both types) -->
+            <div class="flex flex-wrap justify-center gap-4 mt-8">
+                <button id="savePdfBtn" class="btn btn-secondary">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M5 4a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2V6a2 2 0 00-2-2H5zm-1 9v-1h12v1H4zm1-8h10v4H5V5z" clip-rule="evenodd" />
+                    </svg>
+                    PDF 저장
+                </button>
+                <button id="printBtn" class="btn btn-secondary">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M5 4a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2V6a2 2 0 00-2-2H5zm-1 9v-1h12v1H4zm1-8h10v4H5V5z" clip-rule="evenodd" />
+                    </svg>
+                    인쇄
+                </button>
+            </div>
+
+            <!-- Appointment Record Table Section -->
+            <div id="appointmentRecordTableSection" class="overflow-x-auto mt-8 rounded-lg shadow-md">
+                <table class="min-w-full bg-white">
+                    <thead>
+                        <tr>
+                            <th style="width: 6%;">학년도</th>
+                            <th style="width: 9%;">발령일자</th>
+                            <th style="width: 7%;">소속</th>
+                            <th style="width: 6%;">직</th>
+                            <th style="width: 8%;">성명</th>
+                            <th style="width: 18%;">발령사항</th>
+                            <th style="width: 12%;">발령권자</th>
+                            <th style="width: 12%;">발령근거</th>
+                            <th style="width: 8%;">기록자</th>
+                            <th style="width: 8%;">확인자</th>
+                            <th style="width: 10%;">비고</th>
+                            <th style="width: 8%;">관리</th> <!-- Added Management Column -->
+                        </tr>
+                    </thead>
+                    <tbody id="recordsTableBody">
+                        <!-- Records will be dynamically inserted here -->
+                    </tbody>
+                </table>
+                <p id="noAppointmentRecordsMessage" class="text-center text-gray-500 py-8 hidden">
+                    현재 발령 기록이 없습니다. 새로운 발령 기록을 추가해주세요.
+                </p>
+            </div>
+
+            <!-- Appointment Register Table Section -->
+            <div id="appointmentRegisterTableSection" class="overflow-x-auto mt-8 rounded-lg shadow-md hidden">
+                <table class="min-w-full bg-white">
+                    <thead>
+                        <tr>
+                            <th style="width: 10%;">번호</th>
+                            <th style="width: 30%;">위촉내용</th>
+                            <th style="width: 15%;">위촉자</th>
+                            <th style="width: 15%;">위촉년월일</th>
+                            <th style="width: 10%;">교무</th>
+                            <th style="width: 10%;">교감</th>
+                            <th style="width: 10%;">교장</th>
+                            <th style="width: 10%;">관리</th> <!-- Added Management Column -->
+                        </tr>
+                    </thead>
+                    <tbody id="registerTableBody">
+                        <!-- Register records will be dynamically inserted here -->
+                    </tbody>
+                </table>
+                <p id="noRegisterRecordsMessage" class="text-center text-gray-500 py-8 hidden">
+                    현재 위촉 기록이 없습니다. 새로운 위촉 기록을 추가해주세요.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Modal for Confirmation/Alerts -->
+    <div id="customModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 id="modalTitle"></h3>
+            <p id="modalMessage"></p>
+            <div class="modal-buttons">
+                <button id="modalConfirmBtn" class="btn btn-danger hidden">확인</button>
+                <button id="modalCancelBtn" class="btn btn-secondary hidden">취소</button>
+                <button id="modalCloseBtn" class="btn btn-primary hidden">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // LocalStorageManager Class
+        class LocalStorageManager {
+            constructor(appId) {
+                this.appId = appId;
+                this.userIdKey = `${this.appId}_current_user_id`;
+                // Initialize userId from localStorage or generate a new one
+                this.userId = localStorage.getItem(this.userIdKey) || crypto.randomUUID();
+                localStorage.setItem(this.userIdKey, this.userId); // Persist userId
+            }
+
+            getUserId() {
+                return this.userId;
+            }
+
+            // Saves data to localStorage
+            async saveData(categoryName, data) {
+                const storageKey = `${this.appId}_${this.userId}_${categoryName}`;
+                try {
+                    localStorage.setItem(storageKey, JSON.stringify(data));
+                    console.log(`데이터가 localStorage에 저장되었습니다: ${storageKey}`);
+                    return true;
+                } catch (error) {
+                    console.error("localStorage에 데이터 저장 중 오류 발생:", error);
+                    throw error;
+                }
+            }
+
+            // Loads data from localStorage
+            async loadData(categoryName) {
+                const storageKey = `${this.appId}_${this.userId}_${categoryName}`;
+                try {
+                    const data = localStorage.getItem(storageKey);
+                    if (data) {
+                        console.log(`localStorage에서 데이터 불러옴: ${storageKey}`);
+                        return JSON.parse(data);
+                    }
+                    console.log(`localStorage에 해당 데이터 없음: ${storageKey}`);
+                    return null;
+                } catch (error) {
+                    console.error("localStorage에서 데이터 불러오기 중 오류 발생:", error);
+                    throw error;
+                }
+            }
+
+            // Gets records for a specific category
+            async getRecords(categoryName) {
+                return this.loadData(categoryName);
+            }
+
+            // Adds or updates a record
+            async addOrUpdateRecord(categoryName, recordId, newRecord) {
+                let records = await this.loadData(categoryName);
+                if (!records) {
+                    records = [];
+                }
+
+                const idToUse = recordId || Date.now().toString(); // Generate ID if not provided
+                const existingIndex = records.findIndex(r => r.id === idToUse);
+
+                if (existingIndex > -1) {
+                    records[existingIndex] = { ...newRecord, id: idToUse };
+                    console.log(`레코드 업데이트됨: ${idToUse}`);
+                } else {
+                    records.push({ ...newRecord, id: idToUse });
+                    console.log(`새 레코드 추가됨: ${idToUse}`);
+                }
+                await this.saveData(categoryName, records);
+                return { id: idToUse, ...newRecord };
+            }
+
+            // Deletes a record
+            async deleteRecord(categoryName, recordId) {
+                let records = await this.loadData(categoryName);
+                if (!records) {
+                    console.warn("삭제할 레코드가 없습니다.");
+                    return false;
+                }
+                const initialLength = records.length;
+                records = records.filter(record => record.id !== recordId);
+                if (records.length < initialLength) {
+                    await this.saveData(categoryName, records);
+                    console.log(`레코드 삭제됨: ${recordId}`);
+                    return true;
+                } else {
+                    console.log(`삭제할 레코드를 찾을 수 없음: ${recordId}`);
+                    return false;
+                }
+            }
+        }
+
+        // Initialize LocalStorageManager
+        const localStorageManager = new LocalStorageManager('appointment-app');
+        let userId = localStorageManager.getUserId(); // Get the persistent userId
+        let isAuthReady = true; // Always ready for localStorage
+
+        // Global variables to hold the ID and category of the record being edited
+        // Declared on window object to ensure global accessibility.
+        window.editingRecordId = null;
+        window.editingRecordCategory = null;
+
+        // DOM Elements
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const appointmentRecordFormSection = document.getElementById('appointmentRecordFormSection');
+        const appointmentRegisterFormSection = document.getElementById('appointmentRegisterFormSection');
+        const appointmentRecordTableSection = document.getElementById('appointmentRecordTableSection');
+        const appointmentRegisterTableSection = document.getElementById('appointmentRegisterTableSection');
+        const yearFilterSelect = document.getElementById('yearFilterSelect');
+        const authStatusDiv = document.getElementById('authStatus');
+
+        // Appointment Record Form Elements
+        const recordForm = document.getElementById('recordForm');
+        const academicYearInput = document.getElementById('academicYear');
+        const appointmentDateInput = document.getElementById('appointmentDate');
+        const affiliationInput = document.getElementById('affiliation');
+        const positionSelect = document.getElementById('position');
+        const otherPositionContainer = document.getElementById('otherPositionContainer'); // New DOM element
+        const otherPositionInput = document.getElementById('otherPositionInput');       // New DOM element
+        const nameInput = document.getElementById('name');
+        const appointingAuthoritySelect = document.getElementById('appointingAuthority');
+        const otherAppointingAuthorityContainer = document.getElementById('otherAppointingAuthorityContainer');
+        const otherAppointingAuthorityInput = document.getElementById('otherAppointingAuthority');
+        const appointmentDetailsSelect = document.getElementById('appointmentDetails');
+        const otherAppointmentDetailsContainer = document.getElementById('otherAppointmentDetailsContainer');
+        const otherAppointmentDetailsTextarea = document.getElementById('otherAppointmentDetails');
+        const schoolNameContainer = document.getElementById('schoolNameContainer');
+        const schoolNameInput = document.getElementById('schoolNameInput');
+        const officeNameContainer = document.getElementById('officeNameContainer');
+        const officeNameInput = document.getElementById('officeNameInput');
+        const periodContainer = document.getElementById('periodContainer');
+        const periodInput = document.getElementById('periodInput');
+        const appointmentBasisTextarea = document.getElementById('appointmentBasis');
+        const recorderConfirmationInput = document.getElementById('recorderConfirmation');
+        const confirmerConfirmationInput = document.getElementById('confirmerConfirmation');
+        const remarksTextarea = document.getElementById('remarks');
+
+        const submitRecordBtn = document.getElementById('submitRecordBtn');
+        const cancelEditBtn = document.getElementById('cancelEditBtn');
+        const recordsTableBody = document.getElementById('recordsTableBody');
+        const noAppointmentRecordsMessage = document.getElementById('noAppointmentRecordsMessage');
+
+        // 위촉대장 폼 요소
+        const registerForm = document.getElementById('registerForm');
+        const registerNumberInput = document.getElementById('registerNumber');
+        const registerAppointmentDateInput = document.getElementById('registerAppointmentDate');
+        const appointeeNameInput = document.getElementById('appointeeName');
+        const appointmentContentTextarea = document.getElementById('appointmentContent');
+        const approvalAcademicInput = document.getElementById('approvalAcademic');
+        const approvalVicePrincipalInput = document.getElementById('approvalVicePrincipal');
+        const approvalPrincipalInput = document.getElementById('approvalPrincipal');
+
+        const submitRegisterBtn = document.getElementById('submitRegisterBtn');
+        const cancelRegisterEditBtn = document.getElementById('cancelRegisterEditBtn');
+        const registerTableBody = document.getElementById('registerTableBody');
+        const noRegisterRecordsMessage = document.getElementById('noRegisterRecordsMessage');
+
+        // 공통 액션 버튼
+        const savePdfBtn = document.getElementById('savePdfBtn');
+        const printBtn = document.getElementById('printBtn');
+
+        // Modal Elements
+        const customModal = document.getElementById('customModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalMessage = document.getElementById('modalMessage');
+        const modalConfirmBtn = document.getElementById('modalConfirmBtn');
+        const modalCancelBtn = document.getElementById('modalCancelBtn');
+        const modalCloseBtn = document.getElementById('modalCloseBtn');
+
+        // Data Management Variables
+        let currentRecordsData = []; // Stores the currently displayed records for the active category/year
+        let currentRegisterData = []; // Stores the currently displayed register records
+
+        // Current selected category
+        let currentCategory = 'primary-teachers';
+        // Current selected year for filter
+        let currentYearFilter = 'all'; // 'all' or a specific year (e.g., '2025')
+
+        // Initialization Function
+        async function init() {
+            authStatusDiv.textContent = `현재 사용자 ID: ${userId}`; // Display the generated userId
+            switchCategory(currentCategory);
+            addEventListeners();
+        }
+
+        // Event Listener Registration Function
+        function addEventListeners() {
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const category = button.dataset.category;
+                    switchCategory(category);
+                });
+            });
+
+            yearFilterSelect.addEventListener('change', () => {
+                currentYearFilter = yearFilterSelect.value;
+                renderRecords(); // This will trigger re-rendering with new filter
+            });
+
+            // Appointment Record Form Submission Event
+            recordForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (window.editingRecordId) { // Use window.editingRecordId
+                    await updateAppointmentRecord();
+                } else {
+                    await addAppointmentRecord();
+                }
+            });
+
+            // Appointment Register Form Submission Event
+            registerForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (window.editingRecordId) { // Use window.editingRecordId
+                    await updateAppointmentRegisterRecord();
+                } else {
+                    await addAppointmentRegisterRecord();
+                }
+            });
+
+            appointingAuthoritySelect.addEventListener('change', () => {
+                if (appointingAuthoritySelect.value === '기타(입력)') {
+                    otherAppointingAuthorityContainer.classList.remove('hidden');
+                } else {
+                    otherAppointingAuthorityContainer.classList.add('hidden');
+                    otherAppointingAuthorityInput.value = '';
+                }
+            });
+
+            positionSelect.addEventListener('change', () => { // New event listener for position select
+                if (positionSelect.value === '기타(입력)') {
+                    otherPositionContainer.classList.remove('hidden');
+                } else {
+                    otherPositionContainer.classList.add('hidden');
+                    otherPositionInput.value = '';
+                }
+            });
+
+            appointmentDetailsSelect.addEventListener('change', () => {
+                schoolNameContainer.classList.add('hidden');
+                schoolNameInput.value = '';
+                officeNameContainer.classList.add('hidden');
+                officeNameInput.value = '';
+                periodContainer.classList.add('hidden');
+                periodInput.value = '';
+                otherAppointmentDetailsContainer.classList.add('hidden');
+                otherAppointmentDetailsTextarea.value = '';
+
+                const selectedValue = appointmentDetailsSelect.value;
+
+                if (selectedValue === '00초등학교 근무를 명함.' || selectedValue === '교육지원청지정초등학교 근무를 명함.') {
+                    schoolNameContainer.classList.remove('hidden');
+                } else if (selectedValue === '00교육청 파견근무를 명함.') {
+                    officeNameContainer.classList.remove('hidden');
+                    periodContainer.classList.remove('hidden');
+                } else if (selectedValue === '학습연구년제') {
+                    periodContainer.classList.remove('hidden');
+                } else if (selectedValue === '기타') {
+                    otherAppointmentDetailsContainer.classList.remove('hidden');
+                }
+            });
+
+            cancelEditBtn.addEventListener('click', resetForm);
+            cancelRegisterEditBtn.addEventListener('click', resetForm);
+
+            savePdfBtn.addEventListener('click', savePdf);
+            printBtn.addEventListener('click', printRecords);
+
+            modalCloseBtn.addEventListener('click', hideModal);
+            modalCancelBtn.addEventListener('click', hideModal);
+        }
+
+        // Modal Display Function
+        function showModal(title, message, confirmAction = null, showCancel = false) {
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+
+            modalConfirmBtn.classList.add('hidden');
+            modalCancelBtn.classList.add('hidden');
+            modalCloseBtn.classList.add('hidden');
+
+            if (confirmAction) {
+                modalConfirmBtn.classList.remove('hidden');
+                modalConfirmBtn.onclick = () => {
+                    confirmAction();
+                    hideModal();
+                };
+                if (showCancel) {
+                    modalCancelBtn.classList.remove('hidden');
+                }
+            } else {
+                modalCloseBtn.classList.remove('hidden');
+            }
+            customModal.classList.add('show');
+        }
+
+        // Modal Hide Function
+        function hideModal() {
+            customModal.classList.remove('show');
+            modalConfirmBtn.onclick = null; // Clear event listener
+        }
+
+        // Category Switch Function
+        function switchCategory(category) {
+            currentCategory = category;
+
+            tabButtons.forEach(button => {
+                if (button.dataset.category === currentCategory) {
+                    button.classList.add('active');
+                } else {
+                    button.classList.remove('active');
+                }
+            });
+
+            if (currentCategory === 'appointment-register') {
+                appointmentRecordFormSection.classList.add('hidden');
+                appointmentRecordTableSection.classList.add('hidden');
+                appointmentRegisterFormSection.classList.remove('hidden');
+                appointmentRegisterTableSection.classList.remove('hidden');
+                yearFilterSelect.parentElement.classList.add('hidden'); // Hide year filter for register
+                generateNewRegisterNumber();
+            } else {
+                appointmentRecordFormSection.classList.remove('hidden');
+                appointmentRecordTableSection.classList.remove('hidden');
+                appointmentRegisterFormSection.classList.add('hidden');
+                appointmentRegisterTableSection.classList.add('hidden');
+                yearFilterSelect.parentElement.classList.remove('hidden'); // Show year filter for records
+            }
+
+            resetForm(); // Reset the active form
+            populateYearFilter(); // Populate years for the new category
+            renderRecords(); // Render records for the new category and selected year
+        }
+
+        // Populate Year Filter Dropdown (based on localStorage data)
+        async function populateYearFilter() {
+            yearFilterSelect.innerHTML = ''; // Clear existing options
+
+            const years = new Set();
+            const allRecords = await localStorageManager.getRecords(currentCategory); // Load all records for the current category
+
+            if (allRecords) {
+                allRecords.forEach(record => {
+                    if (record.academicYear) {
+                        years.add(record.academicYear);
+                    }
+                });
+            }
+
+            const sortedYears = Array.from(years).sort((a, b) => parseInt(b) - parseInt(a)); // Sort descending
+
+            // Add 'All' option
+            const allOption = document.createElement('option');
+            allOption.value = 'all';
+            allOption.textContent = '전체';
+            yearFilterSelect.appendChild(allOption);
+
+            sortedYears.forEach(year => {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                yearFilterSelect.appendChild(option);
+            });
+
+            // Set default selected year
+            if (sortedYears.includes(currentYearFilter)) {
+                yearFilterSelect.value = currentYearFilter;
+            } else if (sortedYears.length > 0) {
+                yearFilterSelect.value = sortedYears[0]; // Select most recent year
+                currentYearFilter = sortedYears[0];
+            } else {
+                yearFilterSelect.value = 'all';
+                currentYearFilter = 'all';
+            }
+
+            // Set academicYear input to current selected year filter if not 'all'
+            if (currentYearFilter !== 'all') {
+                academicYearInput.value = currentYearFilter;
+            } else {
+                academicYearInput.value = new Date().getFullYear().toString(); // Default to current year for input
+            }
+        }
+
+        // Add Appointment Record (to localStorage)
+        async function addAppointmentRecord() {
+            const newRecord = getAppointmentRecordFormValues();
+            if (!validateAppointmentRecordForm(newRecord)) return;
+
+            try {
+                await localStorageManager.addOrUpdateRecord(currentCategory, null, newRecord);
+                showModal("알림", "새로운 발령 기록이 추가되었습니다.", null, false);
+                resetForm();
+                populateYearFilter(); // Update year filter in case a new year was added
+                renderRecords(); // Re-render records
+            } catch (e) {
+                console.error("발령 기록 추가 중 오류 발생:", e);
+                showModal("오류", "발령 기록 추가에 실패했습니다. 다시 시도해 주세요.", null, false);
+            }
+        }
+
+        // Add Appointment Register Record (to localStorage)
+        async function addAppointmentRegisterRecord() {
+            const newRecord = getAppointmentRegisterFormValues();
+            if (!validateAppointmentRegisterForm(newRecord)) return;
+
+            newRecord.registerNumber = await generateNewRegisterNumber(true); // Generate and assign number
+
+            try {
+                await localStorageManager.addOrUpdateRecord(currentCategory, null, newRecord);
+                showModal("알림", "새로운 위촉 기록이 추가되었습니다.", null, false);
+                resetForm();
+                renderRecords(); // Re-render records
+            } catch (e) {
+                console.error("위촉 기록 추가 중 오류 발생:", e);
+                showModal("오류", "위촉 기록 추가에 실패했습니다. 다시 시도해 주세요.", null, false);
+            }
+        }
+
+        // Update Appointment Record (in localStorage)
+        async function updateAppointmentRecord() {
+            if (!window.editingRecordId) { // Use window.editingRecordId
+                showModal("오류", "수정할 기록을 선택해주세요.", null, false);
+                return;
+            }
+
+            const updatedRecord = getAppointmentRecordFormValues();
+            if (!validateAppointmentRecordForm(updatedRecord)) return;
+
+            try {
+                await localStorageManager.addOrUpdateRecord(currentCategory, window.editingRecordId, updatedRecord); // Use window.editingRecordId
+                showModal("알림", "발령 기록이 성공적으로 수정되었습니다.", null, false);
+                resetForm();
+                populateYearFilter(); // Re-populate year filter in case academic year changed
+                renderRecords(); // Re-render records
+            } catch (e) {
+                console.error("발령 기록 수정 중 오류 발생:", e);
+                showModal("오류", "발령 기록 수정에 실패했습니다. 다시 시도해 주세요.", null, false);
+            }
+        }
+
+        // Update Appointment Register Record (in localStorage)
+        async function updateAppointmentRegisterRecord() {
+            if (!window.editingRecordId) { // Use window.editingRecordId
+                showModal("오류", "수정할 기록을 선택해주세요.", null, false);
+                return;
+            }
+
+            const updatedRecord = getAppointmentRegisterFormValues();
+            if (!validateAppointmentRegisterForm(updatedRecord)) return;
+
+            try {
+                await localStorageManager.addOrUpdateRecord(currentCategory, window.editingRecordId, updatedRecord); // Use window.editingRecordId
+                showModal("알림", "위촉 기록이 성공적으로 수정되었습니다.", null, false);
+                resetForm();
+                renderRecords(); // Re-render records
+            } catch (e) {
+                console.error("위촉 기록 수정 중 오류 발생:", e);
+                showModal("오류", "위촉 기록 수정에 실패했습니다. 다시 시도해 주세요.", null, false);
+            }
+        }
+
+        // Get Appointment Record Form Values
+        function getAppointmentRecordFormValues() {
+            const selectedAppointingAuthorityType = appointingAuthoritySelect.value;
+            const selectedAppointmentDetailsType = appointmentDetailsSelect.value;
+            const selectedPositionType = positionSelect.value; // Get selected position type
+
+            return {
+                academicYear: academicYearInput.value,
+                appointmentDate: appointmentDateInput.value,
+                affiliation: affiliationInput.value,
+                positionType: selectedPositionType, // Save the selected position type
+                positionCustomText: selectedPositionType === '기타(입력)' ? otherPositionInput.value : '', // Save custom text if '기타(입력)'
+                name: nameInput.value,
+
+                appointingAuthorityType: selectedAppointingAuthorityType,
+                appointingAuthorityCustomText: selectedAppointingAuthorityType === '기타(입력)' ? otherAppointingAuthorityInput.value : '',
+
+                appointmentDetailsType: selectedAppointmentDetailsType,
+                appointmentDetailsSchoolName: (selectedAppointmentDetailsType === '00초등학교 근무를 명함.' || selectedAppointmentDetailsType === '교육지원청지정초등학교 근무를 명함.') ? schoolNameInput.value : '',
+                appointmentDetailsOfficeName: selectedAppointmentDetailsType === '00교육청 파견근무를 명함.' ? officeNameInput.value : '',
+                appointmentDetailsPeriod: (selectedAppointmentDetailsType === '00교육청 파견근무를 명함.' || selectedAppointmentDetailsType === '학습연구년제') ? periodInput.value : '',
+                appointmentDetailsCustomText: selectedAppointmentDetailsType === '기타' ? otherAppointmentDetailsTextarea.value : '',
+
+                appointmentBasis: appointmentBasisTextarea.value,
+                recorderConfirmation: recorderConfirmationInput.value,
+                confirmerConfirmation: confirmerConfirmationInput.value,
+                remarks: remarksTextarea.value
+            };
+        }
+
+        // Get Appointment Register Form Values
+        function getAppointmentRegisterFormValues() {
+            return {
+                registerNumber: registerNumberInput.value,
+                appointmentContent: appointmentContentTextarea.value,
+                appointeeName: appointeeNameInput.value,
+                registerAppointmentDate: registerAppointmentDateInput.value,
+                approvalAcademic: approvalAcademicInput.value,
+                approvalVicePrincipal: approvalVicePrincipalInput.value,
+                approvalPrincipal: approvalPrincipalInput.value
+            };
+        }
+
+        // Validate Appointment Record Form
+        function validateAppointmentRecordForm(record) {
+            if (!record.academicYear || !record.name || !record.positionType || !record.appointingAuthorityType) { // Changed 'position' to 'positionType'
+                showModal("입력 오류", "학년도, 성명, 직, 발령권자는 필수 입력 항목입니다.", null, false);
+                return false;
+            }
+            // New validation for '기타 직종'
+            if (record.positionType === '기타(입력)' && !record.positionCustomText) {
+                showModal("입력 오류", "'기타 직종' 선택 시 직종을 직접 입력해야 합니다.", null, false);
+                return false;
+            }
+            if (!record.appointmentDetailsType) {
+                showModal("입력 오류", "발령사항은 필수 입력 항목입니다.", null, false);
+                return false;
+            }
+            if (record.appointmentDetailsType === '00초등학교 근무를 명함.' && !record.appointmentDetailsSchoolName) {
+                showModal("입력 오류", "'00초등학교 근무' 선택 시 학교명을 입력해야 합니다.", null, false);
+                return false;
+            }
+            if (record.appointmentDetailsType === '교육지원청지정초등학교 근무를 명함.' && !record.appointmentDetailsSchoolName) {
+                showModal("입력 오류", "'00교육지원청교육장이 지정하는 초등학교 근무' 선택 시 학교명을 입력해야 합니다.", null, false);
+                return false;
+            }
+            if (record.appointmentDetailsType === '00교육청 파견근무를 명함.' && (!record.appointmentDetailsOfficeName || !record.appointmentDetailsPeriod)) {
+                showModal("입력 오류", "'00교육청 파견근무' 선택 시 교육청명과 기간을 입력해야 합니다.", null, false);
+                return false;
+            }
+            if (record.appointmentDetailsType === '학습연구년제' && !record.appointmentDetailsPeriod) {
+                showModal("입력 오류", "'학습연구년제' 선택 시 기간을 입력해야 합니다.", null, false);
+                return false;
+            }
+            if (record.appointmentDetailsType === '기타' && !record.appointmentDetailsCustomText) {
+                showModal("입력 오류", "'기타 발령사항' 선택 시 상세 내용을 입력해야 합니다.", null, false);
+                return false;
+            }
+            if (record.appointingAuthorityType === '기타(입력)' && !record.appointingAuthorityCustomText) {
+                showModal("입력 오류", "'기타 발령권자' 선택 시 상세 내용을 입력해야 합니다.", null, false);
+                return false;
+            }
+            return true;
+        }
+
+        // Validate Appointment Register Form
+        function validateAppointmentRegisterForm(record) {
+            if (!record.appointmentContent || !record.appointeeName || !record.registerAppointmentDate) {
+                showModal("입력 오류", "위촉내용, 위촉자, 위촉년월일은 필수 입력 항목입니다.", null, false);
+                return false;
+            }
+            return true;
+        }
+
+        // Reset Form and Button States
+        function resetForm() {
+            window.editingRecordId = null; // Use window.editingRecordId
+            window.editingRecordCategory = null; // Use window.editingRecordCategory
+
+            if (currentCategory === 'appointment-register') {
+                registerForm.reset();
+                submitRegisterBtn.textContent = '기록 추가';
+                submitRegisterBtn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
+                    </svg>
+                    기록 추가
+                `;
+                cancelRegisterEditBtn.classList.add('hidden');
+                generateNewRegisterNumber();
+            } else {
+                recordForm.reset();
+                submitRecordBtn.textContent = '기록 추가';
+                submitRecordBtn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
+                    </svg>
+                    기록 추가
+                `;
+                cancelEditBtn.classList.add('hidden');
+
+                otherAppointingAuthorityContainer.classList.add('hidden');
+                otherAppointingAuthorityInput.value = '';
+                otherPositionContainer.classList.add('hidden'); // Reset other position container
+                otherPositionInput.value = ''; // Clear other position input
+                otherAppointmentDetailsContainer.classList.add('hidden');
+                otherAppointmentDetailsTextarea.value = '';
+                schoolNameContainer.classList.add('hidden');
+                schoolNameInput.value = '';
+                officeNameContainer.classList.add('hidden');
+                officeNameInput.value = '';
+                periodContainer.classList.add('hidden');
+                periodInput.value = '';
+                appointingAuthoritySelect.value = '';
+                appointmentDetailsSelect.value = '';
+                positionSelect.value = ''; // Ensure position select is reset
+
+                // Set academicYear input to current selected year filter if not 'all'
+                if (currentYearFilter !== 'all') {
+                    academicYearInput.value = currentYearFilter;
+                } else {
+                    academicYearInput.value = new Date().getFullYear().toString(); // Default to current year for input
+                }
+            }
+        }
+
+        // Generate New Register Number (based on localStorage data)
+        async function generateNewRegisterNumber(assignToInput = false) {
+            const currentYear = new Date().getFullYear().toString();
+            const allRegisterRecords = await localStorageManager.getRecords('appointment-register');
+
+            let maxNum = 0;
+            if (allRegisterRecords) {
+                allRegisterRecords.forEach(rec => {
+                    if (rec.registerNumber) {
+                        const parts = rec.registerNumber.split('-');
+                        if (parts.length === 2 && parts[0] === currentYear) {
+                            const num = parseInt(parts[1]);
+                            if (!isNaN(num) && num > maxNum) {
+                                maxNum = num;
+                            }
+                        }
+                    }
+                });
+            }
+
+            const newNum = maxNum + 1;
+            const generatedNumber = `${currentYear}-${newNum}`;
+
+            if (assignToInput) {
+                registerNumberInput.value = generatedNumber;
+            }
+            return generatedNumber;
+        }
+
+        // Render Records Function (renders different tables based on current category)
+        async function renderRecords() {
+            if (currentCategory === 'appointment-register') {
+                await renderAppointmentRegisterRecords();
+            } else {
+                await renderAppointmentRecords();
+            }
+        }
+
+        // Render Appointment Records (from localStorage)
+        async function renderAppointmentRecords() {
+            recordsTableBody.innerHTML = '';
+            noAppointmentRecordsMessage.classList.add('hidden'); // Hide message initially
+
+            const allRecords = await localStorageManager.getRecords(currentCategory);
+            currentRecordsData = allRecords ? [...allRecords] : []; // Copy to local variable
+
+            // Filter by year if not 'all'
+            let filteredRecords = currentRecordsData;
+            if (currentYearFilter !== 'all') {
+                filteredRecords = currentRecordsData.filter(record => record.academicYear === currentYearFilter);
+            }
+
+            // Sort data in JavaScript
+            filteredRecords.sort((a, b) => {
+                const yearA = parseInt(a.academicYear);
+                const yearB = parseInt(b.academicYear);
+                if (yearA !== yearB) {
+                    return yearB - yearA; // Sort years descending
+                }
+                return new Date(b.appointmentDate) - new Date(a.appointmentDate); // Sort dates descending for same year
+            });
+
+            if (filteredRecords.length === 0) {
+                noAppointmentRecordsMessage.classList.remove('hidden');
+            } else {
+                noAppointmentRecordsMessage.classList.add('hidden');
+                filteredRecords.forEach(record => {
+                    const row = recordsTableBody.insertRow();
+                    row.dataset.id = record.id; // Store record ID
+
+                    // Appointment Details Display Logic
+                    let displayAppointmentDetails = record.appointmentDetailsType || '';
+                    if (record.appointmentDetailsType === '00초등학교 근무를 명함.') {
+                        displayAppointmentDetails = `${record.appointmentDetailsSchoolName || '00'}초등학교 근무를 명함.`;
+                    } else if (record.appointmentDetailsType === '교육지원청지정초등학교 근무를 명함.') {
+                        displayAppointmentDetails = `${record.appointmentDetailsSchoolName || '00'}교육지원청교육장이 지정하는 초등학교 근무를 명함.`;
+                    } else if (record.appointmentDetailsType === '00교육청 파견근무를 명함.') {
+                        displayAppointmentDetails = `${record.appointmentDetailsOfficeName || '00'}교육청 파견근무를 명함.(기간: ${record.appointmentDetailsPeriod || ''})`;
+                    } else if (record.appointmentDetailsType === '학습연구년제') {
+                        displayAppointmentDetails = `학습연구년제(기간: ${record.appointmentDetailsPeriod || ''})`;
+                    } else if (record.appointmentDetailsType === '기타') {
+                        displayAppointmentDetails = record.appointmentDetailsCustomText || '기타';
+                    }
+
+                    // Appointing Authority Display Logic
+                    const displayAppointingAuthority = record.appointingAuthorityType === '기타(입력)' ? 
+                                                        record.appointingAuthorityCustomText || '기타(입력)' : 
+                                                        record.appointingAuthorityType || '';
+
+                    // Position Display Logic (new)
+                    const displayPosition = record.positionType === '기타(입력)' ?
+                                            record.positionCustomText || '기타' :
+                                            record.positionType || '';
+
+                    // Affiliation Display Logic (convert '초등학교' to '초')
+                    let displayAffiliation = record.affiliation || '';
+                    if (displayAffiliation.endsWith('초등학교')) {
+                        displayAffiliation = displayAffiliation.replace('초등학교', '초');
+                    }
+
+                    // Format appointmentDate for two lines on dashboard
+                    let formattedAppointmentDate = '';
+                    if (record.appointmentDate) {
+                        const dateParts = record.appointmentDate.split('-');
+                        if (dateParts.length === 3) {
+                            formattedAppointmentDate = `${dateParts[0]}<br>${dateParts[1]}-${dateParts[2]}`;
+                        } else {
+                            formattedAppointmentDate = record.appointmentDate; // Fallback if format is unexpected
+                        }
+                    }
+
+                    row.innerHTML = `
+                        <td>${record.academicYear || ''}</td>
+                        <td>${formattedAppointmentDate}</td>
+                        <td>${displayAffiliation}</td>
+                        <td>${displayPosition}</td> <!-- Use displayPosition -->
+                        <td>${record.name || ''}</td>
+                        <td>${displayAppointmentDetails}</td>
+                        <td>${displayAppointingAuthority}</td>
+                        <td>${record.appointmentBasis || ''}</td>
+                        <td>${record.recorderConfirmation || ''}</td>
+                        <td>${record.confirmerConfirmation || ''}</td>
+                        <td>${record.remarks || ''}</td>
+                        <td>
+                            <button class="btn btn-secondary btn-sm" onclick="editAppointmentRecord('${record.id}')">수정</button>
+                            <button class="btn btn-danger btn-sm mt-1" onclick="confirmDelete('${record.id}', 'appointment')">삭제</button>
+                        </td>
+                    `;
+                });
+            }
+        }
+
+        // Render Appointment Register Records (from localStorage)
+        async function renderAppointmentRegisterRecords() {
+            registerTableBody.innerHTML = '';
+            noRegisterRecordsMessage.classList.add('hidden'); // Hide message initially
+
+            const allRegisterRecords = await localStorageManager.getRecords(currentCategory);
+            currentRegisterData = allRegisterRecords ? [...allRegisterRecords] : []; // Copy to local variable
+
+            // Sort data in JavaScript by register number (which includes year)
+            currentRegisterData.sort((a, b) => {
+                const numA = a.registerNumber ? a.registerNumber.split('-').map(Number) : [0, 0];
+                const numB = b.registerNumber ? b.registerNumber.split('-').map(Number) : [0, 0];
+                if (numA[0] !== numB[0]) return numB[0] - numA[0]; // Year descending
+                return numB[1] - numA[1]; // Number descending
+            });
+
+            if (currentRegisterData.length === 0) {
+                noRegisterRecordsMessage.classList.remove('hidden');
+            } else {
+                noRegisterRecordsMessage.classList.add('hidden');
+                currentRegisterData.forEach(record => {
+                    const row = registerTableBody.insertRow();
+                    row.dataset.id = record.id; // Store record ID
+                    row.innerHTML = `
+                        <td>${record.registerNumber || ''}</td>
+                        <td>${record.appointmentContent || ''}</td>
+                        <td>${record.appointeeName || ''}</td>
+                        <td>${record.registerAppointmentDate || ''}</td>
+                        <td>${record.approvalAcademic || ''}</td>
+                        <td>${record.approvalVicePrincipal || ''}</td>
+                        <td>${record.approvalPrincipal || ''}</td>
+                        <td>
+                            <button class="btn btn-secondary btn-sm" onclick="editAppointmentRegisterRecord('${record.id}')">수정</button>
+                            <button class="btn btn-danger btn-sm mt-1" onclick="confirmDelete('${record.id}', 'register')">삭제</button>
+                        </td>
+                    `;
+                });
+            }
+        }
+
+        // Edit Appointment Record Mode
+        async function editAppointmentRecord(docId) {
+            const recordToEdit = currentRecordsData.find(rec => rec.id === docId);
+            if (!recordToEdit) {
+                showModal("오류", "해당 기록을 찾을 수 없습니다.", null, false);
+                return;
+            }
+
+            window.editingRecordId = docId; // Use window.editingRecordId
+            window.editingRecordCategory = currentCategory; // Use window.editingRecordCategory
+
+            academicYearInput.value = recordToEdit.academicYear || '';
+            appointmentDateInput.value = recordToEdit.appointmentDate || '';
+            affiliationInput.value = recordToEdit.affiliation || '';
+
+            // Handle position select and custom input
+            positionSelect.value = recordToEdit.positionType || '';
+            if (recordToEdit.positionType === '기타(입력)') {
+                otherPositionContainer.classList.remove('hidden');
+                otherPositionInput.value = recordToEdit.positionCustomText || '';
+            } else {
+                otherPositionContainer.classList.add('hidden');
+                otherPositionInput.value = '';
+            }
+
+            nameInput.value = recordToEdit.name || '';
+
+            appointingAuthoritySelect.value = recordToEdit.appointingAuthorityType || '';
+            if (recordToEdit.appointingAuthorityType === '기타(입력)') {
+                otherAppointingAuthorityContainer.classList.remove('hidden');
+                otherAppointingAuthorityInput.value = recordToEdit.appointingAuthorityCustomText || '';
+            } else {
+                otherAppointingAuthorityContainer.classList.add('hidden');
+                otherAppointingAuthorityInput.value = '';
+            }
+
+            appointmentDetailsSelect.value = recordToEdit.appointmentDetailsType || '';
+            schoolNameContainer.classList.add('hidden');
+            schoolNameInput.value = '';
+            officeNameContainer.classList.add('hidden');
+            officeNameInput.value = '';
+            periodContainer.classList.add('hidden');
+            periodInput.value = '';
+            otherAppointmentDetailsContainer.classList.add('hidden');
+            otherAppointmentDetailsTextarea.value = '';
+
+            if (recordToEdit.appointmentDetailsType === '00초등학교 근무를 명함.' || recordToEdit.appointmentDetailsType === '교육지원청지정초등학교 근무를 명함.') {
+                schoolNameContainer.classList.remove('hidden');
+                schoolNameInput.value = recordToEdit.appointmentDetailsSchoolName || '';
+            } else if (recordToEdit.appointmentDetailsType === '00교육청 파견근무를 명함.') {
+                officeNameContainer.classList.remove('hidden');
+                officeNameInput.value = recordToEdit.appointmentDetailsOfficeName || '';
+                periodContainer.classList.remove('hidden');
+                periodInput.value = recordToEdit.appointmentDetailsPeriod || '';
+            } else if (recordToEdit.appointmentDetailsType === '학습연구년제') {
+                periodContainer.classList.remove('hidden');
+                periodInput.value = recordToEdit.appointmentDetailsPeriod || '';
+            } else if (recordToEdit.appointmentDetailsType === '기타') {
+                otherAppointmentDetailsContainer.classList.remove('hidden');
+                otherAppointmentDetailsTextarea.value = recordToEdit.appointmentDetailsCustomText || '';
+            }
+
+            appointmentBasisTextarea.value = recordToEdit.appointmentBasis || '';
+            recorderConfirmationInput.value = recordToEdit.recorderConfirmation || '';
+            confirmerConfirmationInput.value = recordToEdit.confirmerConfirmation || '';
+            remarksTextarea.value = recordToEdit.remarks || '';
+
+            submitRecordBtn.textContent = '기록 수정';
+            submitRecordBtn.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.38-2.827-2.828z" />
+                </svg>
+                기록 수정
+            `;
+            cancelEditBtn.classList.remove('hidden');
+        }
+
+        // Edit Appointment Register Record Mode
+        async function editAppointmentRegisterRecord(docId) {
+            const recordToEdit = currentRegisterData.find(rec => rec.id === docId);
+            if (!recordToEdit) {
+                showModal("오류", "해당 기록을 찾을 수 없습니다.", null, false);
+                return;
+            }
+
+            window.editingRecordId = docId; // Use window.editingRecordId
+            window.editingRecordCategory = currentCategory; // Use window.editingRecordCategory
+
+            registerNumberInput.value = recordToEdit.registerNumber || '';
+            registerAppointmentDateInput.value = recordToEdit.registerAppointmentDate || '';
+            appointeeNameInput.value = recordToEdit.appointeeName || '';
+            appointmentContentTextarea.value = recordToEdit.appointmentContent || '';
+            approvalAcademicInput.value = recordToEdit.approvalAcademic || '';
+            approvalVicePrincipalInput.value = recordToEdit.approvalVicePrincipal || '';
+            approvalPrincipalInput.value = recordToEdit.approvalPrincipal || '';
+
+            submitRegisterBtn.textContent = '기록 수정';
+            submitRegisterBtn.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.38-2.827-2.828z" />
+                </svg>
+                기록 수정
+            `;
+            cancelRegisterEditBtn.classList.remove('hidden');
+        }
+
+        // Confirm Delete Modal
+        function confirmDelete(docId, type) {
+            showModal("기록 삭제", "이 기록을 정말 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.", async () => {
+                await deleteRecord(docId, type);
+            }, true);
+        }
+
+        // Delete Record (from localStorage)
+        async function deleteRecord(docId, type) {
+            let categoryToDelete = type === 'appointment' ? currentCategory : 'appointment-register';
+            try {
+                const success = await localStorageManager.deleteRecord(categoryToDelete, docId);
+                if (success) {
+                    showModal("알림", "기록이 성공적으로 삭제되었습니다.", null, false);
+                    populateYearFilter(); // Re-populate year filter in case a year became empty
+                    renderRecords(); // Re-render records
+                } else {
+                    showModal("오류", "기록 삭제에 실패했습니다. 다시 시도해 주세요.", null, false);
+                }
+            } catch (e) {
+                console.error("기록 삭제 중 오류 발생:", e);
+                showModal("오류", "기록 삭제에 실패했습니다. 다시 시도해 주세요.", null, false);
+            }
+        }
+
+        // Helper function to get current category title
+        function getCurrentCategoryTitle() {
+            const currentCategoryButton = Array.from(tabButtons).find(btn => btn.dataset.category === currentCategory);
+            return currentCategoryButton ? currentCategoryButton.textContent : '선택된 카테고리 없음';
+        }
+
+        // Save PDF Function
+        function savePdf() {
+            const pdfContainerTemp = document.createElement('div');
+            pdfContainerTemp.classList.add('pdf-container-temp');
+            document.body.appendChild(pdfContainerTemp);
+
+            const title = document.createElement('h2');
+            // Change PDF/Print Title: (Category Name) 발령대장 or 위촉대장
+            if (currentCategory === 'appointment-register') {
+                title.textContent = `(${getCurrentCategoryTitle()}) 위촉대장`;
+            } else {
+                title.textContent = `(${getCurrentCategoryTitle()}) 발령대장`;
+            }
+            pdfContainerTemp.appendChild(title);
+
+            let recordsToPrint = [];
+
+            if (currentCategory === 'appointment-register') {
+                recordsToPrint = [...currentRegisterData]; // Use the data currently displayed
+            } else {
+                recordsToPrint = [...currentRecordsData]; // Use the data currently displayed
+            }
+
+            const tableClone = document.createElement('table');
+            const theadClone = document.createElement('thead');
+            const tbodyClone = document.createElement('tbody');
+            tableClone.appendChild(theadClone);
+            tableClone.appendChild(tbodyClone);
+
+            // Clone headers based on current category
+            if (currentCategory === 'appointment-register') {
+                theadClone.innerHTML = `
+                    <tr>
+                        <th style="width: 10%;">번호</th>
+                        <th style="width: 30%;">위촉내용</th>
+                        <th style="width: 15%;">위촉자</th>
+                        <th style="width: 15%;">위촉년월일</th>
+                        <th style="width: 10%;">교무</th>
+                        <th style="width: 10%;">교감</th>
+                        <th style="width: 10%;">교장</th>
+                    </tr>
+                `;
+            } else {
+                theadClone.innerHTML = `
+                    <tr>
+                        <th style="width: 6%;">학년도</th>
+                        <th style="width: 9%;">발령일자</th>
+                        <th style="width: 7%;">소속</th>
+                        <th style="width: 6%;">직</th>
+                        <th style="width: 8%;">성명</th>
+                        <th style="width: 18%;">발령사항</th>
+                        <th style="width: 12%;">발령권자</th>
+                        <th style="width: 12%;">발령근거</th>
+                        <th style="width: 5%;">기록자</th>
+                        <th style="width: 5%;">확인자</th>
+                        <th style="width: 10%;">비고</th>
+                    </tr>
+                `;
+            }
+
+            recordsToPrint.forEach(record => {
+                const row = tbodyClone.insertRow();
+                if (currentCategory === 'appointment-register') {
+                    row.innerHTML = `
+                        <td>${record.registerNumber || ''}</td>
+                        <td>${record.appointmentContent || ''}</td>
+                        <td>${record.appointeeName || ''}</td>
+                        <td>${record.registerAppointmentDate || ''}</td>
+                        <td>${record.approvalAcademic || ''}</td>
+                        <td>${record.approvalVicePrincipal || ''}</td>
+                        <td>${record.approvalPrincipal || ''}</td>
+                    `;
+                } else {
+                    let displayAppointmentDetails = record.appointmentDetailsType || '';
+                    if (record.appointmentDetailsType === '00초등학교 근무를 명함.') {
+                        displayAppointmentDetails = `${record.appointmentDetailsSchoolName || '00'}초등학교 근무를 명함.`;
+                    } else if (record.appointmentDetailsType === '교육지원청지정초등학교 근무를 명함.') {
+                        displayAppointmentDetails = `${record.appointmentDetailsSchoolName || '00'}교육지원청교육장이 지정하는 초등학교 근무를 명함.`;
+                    } else if (record.appointmentDetailsType === '00교육청 파견근무를 명함.') {
+                        displayAppointmentDetails = `${record.appointmentDetailsOfficeName || '00'}교육청 파견근무를 명함.(기간: ${record.appointmentDetailsPeriod || ''})`;
+                    } else if (record.appointmentDetailsType === '학습연구년제') {
+                        displayAppointmentDetails = `학습연구년제(기간: ${record.appointmentDetailsPeriod || ''})`;
+                    } else if (record.appointmentDetailsType === '기타') {
+                        displayAppointmentDetails = record.appointmentDetailsCustomText || '기타';
+                    }
+
+                    const displayAppointingAuthority = record.appointingAuthorityType === '기타(입력)' ? 
+                                                        record.appointingAuthorityCustomText || '기타(입력)' : 
+                                                        record.appointingAuthorityType || '';
+
+                    // Position Display Logic for PDF/Print
+                    const displayPosition = record.positionType === '기타(입력)' ?
+                                            record.positionCustomText || '기타' :
+                                            record.positionType || '';
+
+                    let displayAffiliation = record.affiliation || '';
+                    if (displayAffiliation.endsWith('초등학교')) {
+                        displayAffiliation = displayAffiliation.replace('초등학교', '초');
+                    }
+
+                    // Format appointmentDate for two lines
+                    let formattedAppointmentDate = '';
+                    if (record.appointmentDate) {
+                        const dateParts = record.appointmentDate.split('-');
+                        if (dateParts.length === 3) {
+                            formattedAppointmentDate = `${dateParts[0]}<br>${dateParts[1]}-${dateParts[2]}`;
+                        } else {
+                            formattedAppointmentDate = record.appointmentDate; // Fallback if format is unexpected
+                        }
+                    }
+
+                    row.innerHTML = `
+                        <td>${record.academicYear || ''}</td>
+                        <td>${formattedAppointmentDate}</td>
+                        <td>${displayAffiliation}</td>
+                        <td>${displayPosition}</td> <!-- Use displayPosition for PDF/Print -->
+                        <td>${record.name || ''}</td>
+                        <td style="text-align: left;">${displayAppointmentDetails}</td>
+                        <td>${displayAppointingAuthority}</td>
+                        <td style="text-align: left;">${record.appointmentBasis || ''}</td>
+                        <td>${record.recorderConfirmation || ''}</td>
+                        <td>${record.confirmerConfirmation || ''}</td>
+                        <td>${record.remarks || ''}</td>
+                    `;
+                }
+            });
+
+            pdfContainerTemp.appendChild(tableClone);
+
+            const opt = {
+                margin: 10, // Set margins to 10mm for PDF
+                filename: `(${getCurrentCategoryTitle()})_${currentCategory === 'appointment-register' ? '위촉대장' : '발령대장'}${currentYearFilter !== 'all' ? `_${currentYearFilter}` : ''}.pdf`, // Update filename
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' } // Changed unit to mm and format to a4
+            };
+
+            showModal("PDF 생성 중", "PDF 파일을 생성하고 있습니다. 잠시 기다려 주세요...", null, false);
+
+            html2pdf().from(pdfContainerTemp).set(opt).save().then(() => {
+                hideModal();
+                showModal("PDF 생성 완료", "PDF 파일이 성공적으로 생성되었습니다.", null, false);
+            }).catch(error => {
+                hideModal();
+                console.error("PDF 생성 중 오류 발생:", error);
+                showModal("PDF 생성 오류", "PDF 파일을 생성하는 중 오류가 발생했습니다. 다시 시도해 주세요.", null, false);
+            }).finally(() => {
+                if (pdfContainerTemp.parentNode) {
+                    pdfContainerTemp.parentNode.removeChild(pdfContainerTemp);
+                }
+            });
+        }
+
+        // Print Function
+        function printRecords() {
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write('<html><head><title>대장 인쇄</title>');
+            printWindow.document.write('<style>');
+            printWindow.document.write(`
+                body { font-family: 'Inter', sans-serif; margin: 0; } /* Set margin to 0 for print */
+                table { width: 100%; border-collapse: collapse; margin-top: 1rem; table-layout: fixed; }
+                th, td { border: 1px solid #ccc; padding: 8px; text-align: center; vertical-align: middle; word-wrap: break-word; white-space: normal; }
+                th { background-color: #f0f0f0; font-weight: bold; white-space: nowrap; } /* Ensure headers do not wrap */
+                .action-buttons-cell { display: none; } /* 인쇄 시 관리 버튼 숨김 */
+                @page { size: landscape; margin: 10mm; } /* 인쇄 방향을 가로로 설정, margin 10mm */
+
+                h2 { text-align: center; } /* Center align the title */
+
+                /* Column widths for Appointment Record Table in Print */
+                #appointmentRecordTableSection th:nth-child(1),
+                #appointmentRecordTableSection td:nth-child(1) { width: 6%; } /* 학년도 */
+                #appointmentRecordTableSection th:nth-child(2),
+                #appointmentRecordTableSection td:nth-child(2) { width: 9%; white-space: normal; } /* 발령일자 - Allow two lines for date */
+                #appointmentRecordTableSection th:nth-child(3),
+                #appointmentRecordTableSection td:nth-child(3) { width: 7%; white-space: nowrap; } /* 소속 - Single line */
+                #appointmentRecordTableSection th:nth-child(4),
+                #appointmentRecordTableSection td:nth-child(4) { width: 6%; } /* 직 */
+                #appointmentRecordTableSection th:nth-child(5),
+                #appointmentRecordTableSection td:nth-child(5) { width: 8%; } /* 성명 */
+                #appointmentRecordTableSection th:nth-child(6),
+                #appointmentRecordTableSection td:nth-child(6) { text-align: left; width: 18%; } /* 발령사항 - Left align */
+                #appointmentRecordTableSection th:nth-child(7),
+                #appointmentRecordTableSection td:nth-child(7) { width: 12%; } /* 발령권자 */
+                #appointmentRecordTableSection th:nth-child(8),
+                #appointmentRecordTableSection td:nth-child(8) { text-align: left; width: 12%; } /* 발령근거 - Left align */
+                #appointmentRecordTableSection th:nth-child(9),
+                #appointmentRecordTableSection td:nth-child(9) { width: 5%; } /* 기록자 - Reduced width */
+                #appointmentRecordTableSection th:nth-child(10),
+                #appointmentRecordTableSection td:nth-child(10) { width: 5%; } /* 확인자 - Reduced width */
+                #appointmentRecordTableSection th:nth-child(11),
+                #appointmentRecordTableSection td:nth-child(11) { width: 10%; } /* 비고 */
+
+                /* Column widths for Appointment Register Table in Print */
+                #appointmentRegisterTableSection th:nth-child(1),
+                #appointmentRegisterTableSection td:nth-child(1) { width: 10%; } /* 번호 */
+                #appointmentRegisterTableSection th:nth-child(2),
+                #appointmentRegisterTableSection td:nth-child(2) { width: 30%; } /* 위촉내용 */
+                #appointmentRegisterTableSection th:nth-child(3),
+                #appointmentRegisterTableSection td:nth-child(3) { width: 15%; } /* 위촉자 */
+                #appointmentRegisterTableSection th:nth-child(4),
+                #appointmentRegisterTableSection td:nth-child(4) { width: 15%; } /* 위촉년월일 */
+                #appointmentRegisterTableSection th:nth-child(5),
+                #appointmentRegisterTableSection td:nth-child(5) { width: 10%; } /* 교무 */
+                #appointmentRegisterTableSection th:nth-child(6),
+                #appointmentRegisterTableSection td:nth-child(6) { width: 10%; } /* 교감 */
+                #appointmentRegisterTableSection th:nth-child(7),
+                #appointmentRegisterTableSection td:nth-child(7) { width: 10%; } /* 교장 */
+            `);
+            printWindow.document.write('</style>');
+            printWindow.document.write('</head><body>');
+
+            // Change PDF/Print Title: (Category Name) 발령대장 or 위촉대장
+            if (currentCategory === 'appointment-register') {
+                printWindow.document.write(`<h2>(${getCurrentCategoryTitle()}) 위촉대장</h2>`);
+            } else {
+                printWindow.document.write(`<h2>(${getCurrentCategoryTitle()}) 발령대장</h2>`);
+            }
+
+            const tableClone = document.createElement('table');
+            const theadClone = document.createElement('thead');
+            const tbodyClone = document.createElement('tbody');
+            tableClone.appendChild(theadClone);
+            tableClone.appendChild(tbodyClone);
+
+            // Clone headers based on current category
+            if (currentCategory === 'appointment-register') {
+                theadClone.innerHTML = `
+                    <tr>
+                        <th style="width: 10%;">번호</th>
+                        <th style="width: 30%;">위촉내용</th>
+                        <th style="width: 15%;">위촉자</th>
+                        <th style="width: 15%;">위촉년월일</th>
+                        <th style="width: 10%;">교무</th>
+                        <th style="width: 10%;">교감</th>
+                        <th style="width: 10%;">교장</th>
+                    </tr>
+                `;
+            } else {
+                theadClone.innerHTML = `
+                    <tr>
+                        <th style="width: 6%;">학년도</th>
+                        <th style="width: 9%;">발령일자</th>
+                        <th style="width: 7%;">소속</th>
+                        <th style="width: 6%;">직</th>
+                        <th style="width: 8%;">성명</th>
+                        <th style="width: 18%;">발령사항</th>
+                        <th style="width: 12%;">발령권자</th>
+                        <th style="width: 12%;">발령근거</th>
+                        <th style="width: 5%;">기록자</th>
+                        <th style="width: 5%;">확인자</th>
+                        <th style="width: 10%;">비고</th>
+                    </tr>
+                `;
+            }
+
+            let recordsToPrint = [];
+
+            if (currentCategory === 'appointment-register') {
+                recordsToPrint = [...currentRegisterData]; // Use the data currently displayed
+            } else {
+                recordsToPrint = [...currentRecordsData]; // Use the data currently displayed
+            }
+
+            recordsToPrint.forEach(record => {
+                const row = tbodyClone.insertRow();
+                if (currentCategory === 'appointment-register') {
+                    row.innerHTML = `
+                        <td>${record.registerNumber || ''}</td>
+                        <td>${record.appointmentContent || ''}</td>
+                        <td>${record.appointeeName || ''}</td>
+                        <td>${record.registerAppointmentDate || ''}</td>
+                        <td>${record.approvalAcademic || ''}</td>
+                        <td>${record.approvalVicePrincipal || ''}</td>
+                        <td>${record.approvalPrincipal || ''}</td>
+                    `;
+                } else {
+                    let displayAppointmentDetails = record.appointmentDetailsType || '';
+                    if (record.appointmentDetailsType === '00초등학교 근무를 명함.') {
+                        displayAppointmentDetails = `${record.appointmentDetailsSchoolName || '00'}초등학교 근무를 명함.`;
+                    } else if (record.appointmentDetailsType === '교육지원청지정초등학교 근무를 명함.') {
+                        displayAppointmentDetails = `${record.appointmentDetailsSchoolName || '00'}교육지원청교육장이 지정하는 초등학교 근무를 명함.`;
+                    } else if (record.appointmentDetailsType === '00교육청 파견근무를 명함.') {
+                        displayAppointmentDetails = `${record.appointmentDetailsOfficeName || '00'}교육청 파견근무를 명함.(기간: ${record.appointmentDetailsPeriod || ''})`;
+                    } else if (record.appointmentDetailsType === '학습연구년제') {
+                        displayAppointmentDetails = `학습연구년제(기간: ${record.appointmentDetailsPeriod || ''})`;
+                    } else if (record.appointmentDetailsType === '기타') {
+                        displayAppointmentDetails = record.appointmentDetailsCustomText || '기타';
+                    }
+
+                    const displayAppointingAuthority = record.appointingAuthorityType === '기타(입력)' ? 
+                                                        record.appointingAuthorityCustomText || '기타(입력)' : 
+                                                        record.appointingAuthorityType || '';
+
+                    // Position Display Logic for PDF/Print
+                    const displayPosition = record.positionType === '기타(입력)' ?
+                                            record.positionCustomText || '기타' :
+                                            record.positionType || '';
+
+                    let displayAffiliation = record.affiliation || '';
+                    if (displayAffiliation.endsWith('초등학교')) {
+                        displayAffiliation = displayAffiliation.replace('초등학교', '초');
+                    }
+
+                    // Format appointmentDate for two lines
+                    let formattedAppointmentDate = '';
+                    if (record.appointmentDate) {
+                        const dateParts = record.appointmentDate.split('-');
+                        if (dateParts.length === 3) {
+                            formattedAppointmentDate = `${dateParts[0]}<br>${dateParts[1]}-${dateParts[2]}`;
+                        } else {
+                            formattedAppointmentDate = record.appointmentDate; // Fallback if format is unexpected
+                        }
+                    }
+
+                    row.innerHTML = `
+                        <td>${record.academicYear || ''}</td>
+                        <td>${formattedAppointmentDate}</td>
+                        <td>${displayAffiliation}</td>
+                        <td>${displayPosition}</td> <!-- Use displayPosition for PDF/Print -->
+                        <td>${record.name || ''}</td>
+                        <td style="text-align: left;">${displayAppointmentDetails}</td>
+                        <td>${displayAppointingAuthority}</td>
+                        <td style="text-align: left;">${record.appointmentBasis || ''}</td>
+                        <td>${record.recorderConfirmation || ''}</td>
+                        <td>${record.confirmerConfirmation || ''}</td>
+                        <td>${record.remarks || ''}</td>
+                    `;
+                }
+            });
+
+            printWindow.document.write(tableClone.outerHTML);
+            printWindow.document.write('</body></html>');
+            printWindow.document.close();
+            printWindow.print();
+        }
+
+        // App Initialization
+        init();
+
+        // Expose functions to global scope for onclick attributes in dynamically generated HTML
+        window.editAppointmentRecord = editAppointmentRecord;
+        window.editAppointmentRegisterRecord = editAppointmentRegisterRecord;
+        window.confirmDelete = confirmDelete;
+        window.resetForm = resetForm; // Expose resetForm for cancel buttons
+
+    </script>
+</body>
+</html>
